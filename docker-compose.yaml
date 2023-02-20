@@ -1,0 +1,19 @@
+services:
+#  api-gateway:
+#    image: livefy/livefy-messaging/livefy-api-gateway:0.0.1-SNAPSHOT
+#    container_name: livefy-api-gateway
+#    ports:
+#      - "8080:8080"
+
+  messages-service:
+    image: livefy/livefy-messaging/livefy-messages-services:0.0.1-SNAPSHOT
+    container_name: livefy-messages-service
+
+  users-service:
+    image: livefy/livefy-messaging/livefy-users-services:0.0.1-SNAPSHOT
+    container_name: livefy-users-service
+
+networks:
+  default:
+    external:
+      name: livefy-messaging

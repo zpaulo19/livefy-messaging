@@ -1,0 +1,16 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: circleci/openjdk:11-jdk
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run:
+          name: Show directory contents
+          command: ls
+      - run: mvn -DskipTests clean package -f ./api-gateway
+      - run: mvn -DskipTests clean package -f ./messages-services
+      - run: mvn -DskipTests clean package -f ./users-services
+

@@ -1,0 +1,94 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: livefy-users-services
+data:
+  application.yml: |-
+    initial-profiles:
+    spring:
+      redis:
+        host: livefy-redis
+      kafka:
+        bootstrap-servers: livefy-kafka1:9092, livefy-kafka2:9092, livefy-kafka3:9092
+      zipkin:
+        base-url: http://livefy-zipkin:9411/
+      security:
+        oauth2:
+          resourceserver:
+            jwt:
+              jwk-set-uri: http://livefy-keycloak:8080/auth/realms/messaging/protocol/openid-connect/certs
+      cloud:
+        consul:
+          host: livefy-consul
+          discovery:
+            health-check-path: ${spring.mvc.servlet.path}/actuator/health
+            prefer-ip-address: 'true'
+            instance-id: ${spring.application.name}-${server.port}-${application.instance-id}
+        bus:
+          id: ${spring.application.name}:${server.port}:${application.instance-id}
+        stream:
+          bindings:
+            springCloudBusInput:
+              group: ${spring.application.name}
+            springCloudBusOutput:
+              group: ${spring.application.name}
+          kafka:
+            binder:
+              required-acks: all
+              producer-properties:
+                enable:
+                  idempotence: 'true'
+              brokers: ${spring.kafka.bootstrap-servers}
+      mvc:
+        servlet:
+          path: /api/users
+      liquibase:
+        change-log: classpath:/db/changelog/db.changelog-master.xml
+        default-schema: users
+      jpa:
+        hibernate:
+          ddl-auto: validate
+        properties:
+          hibernate:
+            default_schema: users
+      cache:
+        type: redis
+        redis:
+          key-prefix: 'profiles:'
+          time-to-live: 10m
+        cache-names: profile-by-userid
+      config:
+        import: 'consul:'
+        activate:
+          on-profile: default
+      application:
+        name: users-service
+      datasource:
+        password: postgres
+        username: postgres
+        url: jdbc:postgresql://livefy-postgres:5432/messaging
+    logging:
+      level:
+        org:
+          springframework:
+            security: debug
+          hibernate:
+            type:
+              descriptor:
+                sql:
+                  BasicBinder: trace
+            SQL: debug
+        livefy:
+          app:
+            usersservice: debug
+    server:
+      port: '8520'
+    application:
+      instance-id: ${cachedrandom.${spring.application.name}.value}
+    initial-users: ''
+    management:
+        endpoint:
+          health:
+            enabled: true
+          info:
+            enabled: true  

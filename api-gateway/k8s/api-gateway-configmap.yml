@@ -1,0 +1,72 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: livefy-api-gateway
+data:
+  application.yml: |-
+    server:
+      port: 8080
+    spring:
+      security:
+        oauth2:
+          client:
+            registration:
+              iam:
+                scope: openid, profile, email, messages:read, messages:write
+                authorization-grant-type: authorization_code
+                redirect-uri: '{baseUrl}/login/oauth2/code/{registrationId}'
+                provider: keycloak
+                client-secret: client-secret
+                client-id: livefy-api-gateway
+            provider:
+              keycloak:
+                user-name-attribute: preferred_username
+                authorization-uri: http://livefy-keycloak:8080/auth/realms/messaging/protocol/openid-connect/auth
+                token-uri: http://livefy-keycloak:8080/auth/realms/messaging/protocol/openid-connect/token
+                jwk-set-uri: http://livefy-keycloak:8080/auth/realms/messaging/protocol/openid-connect/certs
+                user-info-uri: http://livefy-keycloak:8080/auth/realms/messaging/protocol/openid-connect/userinfo
+                end-session-uri: http://livefy-keycloak:8080/auth/realms/messaging/protocol/openid-connect/logout
+      redis:
+        host: livefy-redis
+      zipkin:
+        base-url: http://livefy-zipkin:9411/
+      cloud:
+        gateway:
+          routes[0]:
+            id: messages
+            predicates[0]: Path=/api/messages/**
+            filters[0]: TokenRelay=
+            uri: lb://messages-service
+          routes[1]:
+            id: users
+            uri: lb://users-service
+            predicates[0]: Path=/api/users/**
+          default-filters[0]: RemoveRequestHeader=Cookie
+        consul:
+          host: livefy-consul
+          discovery:
+            prefer-ip-address: 'true'
+            instance-id: ${spring.application.name}-${server.port}-${random.value}
+      config:
+        import: 'consul:'
+        activate:
+          on-profile: default
+      application:
+        name: api-gateway
+      session:
+        store-type: redis
+        redis:
+          namespace: spring:session:${spring.application.name}
+    logging:
+      level:
+        org:
+          springframework:
+            security: debug
+            cloud:
+              gateway: debug
+    management:
+      endpoint:
+        health:
+          enabled: true
+        info:
+          enabled: true  
